@@ -1,0 +1,1 @@
+# browser-trajectories-extension
