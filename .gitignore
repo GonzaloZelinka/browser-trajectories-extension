@@ -1,0 +1,49 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+*.pth
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# IntelliJ
+**/.idea
+*.iml
+
+# VSCode
+*.code-workspace
+
+# filesystem files
+.DS_Store
+
+# Local environment files
+*.env
+.env.*
+*.envrc
+local*.yaml
+
+# filesystem databases
+dump.rdb
+*.sqlite
+*.db
+
+# Temp dirs
+tmp
+
+node_modules
+dist
+*.local
+
+*.storage
+
+# next.js
+/.next/
+/out/
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
