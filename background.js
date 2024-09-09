@@ -29,8 +29,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     });
   } else if (request.action === 'createNewTab') {
-    chrome.tabs.create({ url: request.url }, newTab => {
-      sendResponse(newTab.id);
+    chrome.windows.create({ url: request.url, focused: true }, newWindow => {
+      sendResponse(newWindow.tabs[0].id);
     });
     return true; // Indicates that the response is sent asynchronously
   } else if (request.action === 'extensionLoadChanged') {

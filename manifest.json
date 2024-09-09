@@ -5,7 +5,8 @@
   "description": "Adds a red sidebar to the left side of the page",
   "permissions": [
     "activeTab",
-    "tabs"
+    "tabs",
+    "windows"
   ],
   "host_permissions": [
     "http://localhost:3000/*",
