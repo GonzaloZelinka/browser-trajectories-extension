@@ -4,24 +4,6 @@ console.log('Content script loaded');
 
 let isTracking = false;
 
-// Function to initialize tracking, used for page reload/navigation
-function initializeTracking() {
-  chrome.runtime.sendMessage(
-    {
-      action: 'shouldListenersRun',
-    },
-    response => {
-      isTracking = response.run;
-      if (isTracking) {
-        addEventListeners();
-      }
-      // else {
-      //   removeHighlight(); // Remove highlight when tracking is stopped
-      // }
-    }
-  );
-}
-
 // Add this line to initialize tracking when the script loads
 initializeTracking();
 
@@ -49,6 +31,7 @@ function addEventListeners() {
   // Add mousemove and scroll event listeners
   document.addEventListener('mousemove', handleMouseMove);
   window.addEventListener('scroll', handleScroll);
+  window.addEventListener('popstate', handleBack);
 }
 
 function removeEventListeners() {
@@ -62,9 +45,19 @@ function removeEventListeners() {
   // Remove mousemove and scroll event listeners
   document.removeEventListener('mousemove', handleMouseMove);
   window.removeEventListener('scroll', handleScroll);
+  window.removeEventListener('popstate', handleBack);
 }
 
 // listeners
+
+function handleBack(event) {
+  // Determine if the user is going back or forward. We handle always back, because the user can click again in the link after to go forward.
+  const browserAction = {
+    type: 'pageBack',
+  };
+
+  sendEventBrowserTrajectories(browserAction);
+}
 
 function handleClick(event) {
   const browserAction = {
@@ -75,22 +68,7 @@ function handleClick(event) {
     },
   };
 
-  const rawEvent = {
-    tagName: event.target.tagName,
-    text: event.target.textContent || null,
-    isInteractable: isInteractableElement(event.target),
-    inputType: event.target.type || undefined,
-    isChecked:
-      event.target.checked !== undefined ? event.target.checked : undefined,
-    selectedOptions:
-      event.target.tagName === 'SELECT'
-        ? Array.from(event.target.selectedOptions).map(option => option.value)
-        : undefined,
-    alt: event.target.alt || undefined,
-    className: event.target.className || undefined,
-    elementId: event.target.id || undefined,
-    xPath: getXPathForElement(event.target),
-  };
+  const rawEvent = getElementInfo(event.target);
 
   sendEventBrowserTrajectories(browserAction, rawEvent);
 }
@@ -101,15 +79,7 @@ function handleKeyDown(event) {
     key: event.key,
   };
 
-  const rawEvent = {
-    tagName: event.target.tagName,
-    text: event.target.textContent || null,
-    isInteractable: isInteractableElement(event.target),
-    inputType: event.target.type || undefined,
-    className: event.target.className || undefined,
-    elementId: event.target.id || undefined,
-    xPath: getXPathForElement(event.target),
-  };
+  const rawEvent = getElementInfo(event.target);
 
   sendEventBrowserTrajectories(browserAction, rawEvent);
 }
@@ -120,15 +90,7 @@ function handleKeyUp(event) {
     key: event.key,
   };
 
-  const rawEvent = {
-    tagName: event.target.tagName,
-    text: event.target.textContent || null,
-    isInteractable: isInteractableElement(event.target),
-    inputType: event.target.type || undefined,
-    className: event.target.className || undefined,
-    elementId: event.target.id || undefined,
-    xPath: getXPathForElement(event.target),
-  };
+  const rawEvent = getElementInfo(event.target);
 
   sendEventBrowserTrajectories(browserAction, rawEvent);
 }
@@ -163,21 +125,25 @@ function handleWheel(event) {
 
 function checkNavigationType() {
   let browserAction;
+  history.pushState(null, null, document.URL);
   const navigation = performance.getEntriesByType('navigation')[0];
 
   if (navigation.type === 'reload') {
+    console.log('navigation type: reload');
     browserAction = {
       type: 'pageReload',
     };
   } else if (navigation.type === 'navigate') {
-    console.log('navigation type', navigation.type);
+    console.log('navigation type: navigate');
     browserAction = {
       type: 'navigate',
       url: window.location.href,
     };
   }
 
-  sendEventBrowserTrajectories(browserAction);
+  if (browserAction) {
+    sendEventBrowserTrajectories(browserAction);
+  }
 }
 
 function handleMouseMove(event) {
@@ -199,8 +165,65 @@ function handleScroll() {
   }
 }
 
-// bounding box
+// element info - https://github.com/scaleapi/browser-trajectories/blob/main/src/server/browser/injected/injectGetElementInfo.ts
+function getElementInfo(element) {
+  let text = null;
+  let inputType = undefined;
+  let isChecked = undefined;
+  let selectedOptions = undefined;
 
+  if (element.hasAttribute('aria-label')) {
+    text = element.getAttribute('aria-label');
+  }
+
+  if (element.tagName === 'IMG') {
+    text = element.getAttribute('alt');
+  }
+
+  // check if select element and get all selected options
+  if (element.tagName === 'OPTION') {
+    const selectElement = element.parentElement;
+    selectedOptions = Array.from(selectElement.selectedOptions).map(
+      option => option.text
+    );
+  }
+
+  if (element.tagName === 'INPUT') {
+    text = element.value;
+    inputType = element.type;
+    // because hover element has the opposite of the actual value
+    isChecked = !element.checked;
+  }
+
+  if (!text) {
+    const textNodes = Array.from(element.childNodes).filter(
+      node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()
+    );
+
+    if (textNodes.length > 0) {
+      text = textNodes.map(node => node.textContent?.trim()).join(' ');
+    }
+  }
+
+  const rect = element.getBoundingClientRect();
+  return {
+    tagName: element.tagName,
+    text,
+    inputType,
+    isChecked,
+    selectedOptions,
+    boundingBox: {
+      x: rect.x + window.scrollX,
+      y: rect.y + window.scrollY,
+      width: rect.width,
+      height: rect.height,
+    },
+    elementId: element.id || undefined,
+    xpath: getXPathForElement(element),
+  };
+}
+
+// bounding box
 function showHighlight(element) {
   removeHighlight(); // Remove any existing highlight
 
@@ -250,6 +273,34 @@ if (isTracking) {
 
 // helpers
 
+// Function to initialize tracking, used for page reload/navigation
+function initializeTracking() {
+  chrome.runtime.sendMessage(
+    {
+      action: 'shouldListenersRun',
+    },
+    response => {
+      if (response.run) {
+        // Send another message to get the current tab ID
+        chrome.runtime.sendMessage(
+          { action: 'getCurrentTabId' },
+          tabIdResponse => {
+            if (tabIdResponse.tabId.toString() === response.tabId) {
+              isTracking = true;
+              addEventListeners();
+            } else {
+              console.log('Current tab is not the target tab');
+              isTracking = false;
+            }
+          }
+        );
+      } else {
+        isTracking = false;
+      }
+    }
+  );
+}
+
 function isInteractableElement(element) {
   const interactableTags = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
   return interactableTags.includes(element.tagName) || element.onclick !== null;
@@ -294,7 +345,7 @@ function getXPathForElement(element) {
     const sibling = siblings[i];
     if (sibling === element) {
       return (
-        window.getXPath(element.parentNode) +
+        getXPathForElement(element.parentNode) +
         '/' +
         element.tagName.toLowerCase() +
         '[' +

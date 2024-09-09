@@ -4,22 +4,35 @@ console.log('bt content script loaded');
 // Setting the initial value
 const state = localStorage.getItem('bt-extension-load');
 if (!state) {
-  localStorage.setItem('bt-extension-load', null);
+  localStorage.setItem('bt-extension-load', false);
 }
 
 function parseState(rawState) {
   if (rawState === 'true') {
     return true;
   }
-  if (rawState === 'false') {
-    return false;
-  }
-  return null;
+  return false;
 }
 
 function getState() {
   const rawState = localStorage.getItem('bt-extension-load');
   return parseState(rawState);
+}
+
+function getTabId() {
+  return localStorage.getItem('extension-original-tab-id');
+}
+
+function setTabId(newTabId) {
+  localStorage.setItem('extension-original-tab-id', newTabId.toString());
+}
+
+function removeTabId() {
+  localStorage.removeItem('extension-original-tab-id');
+}
+
+function setState(newState) {
+  localStorage.setItem('bt-extension-load', newState);
 }
 
 // Listen for messages from the background script
@@ -47,9 +60,31 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ success: true });
   } else if (request.action === 'shouldListenersRun') {
     const state = getState();
-    sendResponse({ run: state });
+    const tabId = getTabId();
+    sendResponse({ run: state, tabId });
   }
 });
+
+function startTracking() {
+  chrome.runtime.sendMessage(
+    { action: 'createNewTab', url: 'https://www.google.com' },
+    newTabId => {
+      if (chrome.runtime.lastError) {
+        console.error('Error creating new tab:', chrome.runtime.lastError);
+        return;
+      }
+
+      // Store the tab ID in localStorage
+      setTabId(newTabId);
+
+      // Forward the response to the background script with the tabId
+      chrome.runtime.sendMessage({
+        action: 'extensionLoadChanged',
+        tabId: newTabId,
+      });
+    }
+  );
+}
 
 // Add this event listener to receive messages from the app
 window.addEventListener(
@@ -61,10 +96,7 @@ window.addEventListener(
     // Handle the message from the app
     if (event.data.action === 'extensionLoadChanged') {
       // Forward the response to the background script if needed
-      chrome.runtime.sendMessage({
-        action: 'extensionLoadChanged',
-        value: event.data.value,
-      });
+      startTracking();
     }
   },
   false
@@ -73,12 +105,16 @@ window.addEventListener(
 // Add this function to handle localStorage changes
 function handleStorageChange(event) {
   if (event.key === 'bt-extension-load') {
-    // You can add more logic here to handle the change
     const state = parseState(event.newValue);
-    chrome.runtime.sendMessage({
-      action: 'extensionLoadChanged',
-      value: state,
-    });
+    if (state === false) {
+      removeTabId();
+      chrome.runtime.sendMessage({
+        action: 'extensionLoadChanged',
+        value: state,
+      });
+    } else if (state === true) {
+      startTracking();
+    }
   }
 }
 

@@ -28,20 +28,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         );
       }
     });
+  } else if (request.action === 'createNewTab') {
+    chrome.tabs.create({ url: request.url }, newTab => {
+      sendResponse(newTab.id);
+    });
+    return true; // Indicates that the response is sent asynchronously
   } else if (request.action === 'extensionLoadChanged') {
-    // send this message to all the tabs.
-    if (request.value) {
-      chrome.tabs.query({}, tabs =>
-        tabs.forEach(t => {
-          chrome.tabs.sendMessage(t.id, { action: 'startTracking' });
-        })
-      );
+    // Use the tabId received from the content script
+    if (request.tabId) {
+      chrome.tabs.sendMessage(request.tabId, { action: 'startTracking' });
     } else if (request.value === false) {
       chrome.tabs.query({}, tabs =>
         tabs.forEach(t => {
           chrome.tabs.sendMessage(t.id, { action: 'stopTracking' });
         })
       );
+    } else {
+      console.error('No tabId provided for extensionLoadChanged');
     }
   } else if (request.action === 'shouldListenersRun') {
     chrome.tabs.query({ url: 'http://localhost:3000/*' }, tabs => {
@@ -70,5 +73,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     });
     return true; // Add this line to indicate that the response will be sent asynchronously
+  } else if (request.action === 'getCurrentTabId') {
+    sendResponse({ tabId: sender.tab.id });
   }
 });
