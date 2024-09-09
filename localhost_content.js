@@ -1,9 +1,10 @@
-console.log('Localhost content script loaded');
+// see - https://docs.google.com/document/d/1kbSELmkCa_X41sWa_pSdlWhqDW2PqwGmGu3PoqF8Otg/edit?usp=sharing
+console.log('bt content script loaded');
 
 // Setting the initial value
-const state = localStorage.getItem('extension-load');
+const state = localStorage.getItem('bt-extension-load');
 if (!state) {
-  localStorage.setItem('extension-load', null);
+  localStorage.setItem('bt-extension-load', null);
 }
 
 function parseState(rawState) {
@@ -17,13 +18,13 @@ function parseState(rawState) {
 }
 
 function getState() {
-  const rawState = localStorage.getItem('extension-load');
+  const rawState = localStorage.getItem('bt-extension-load');
   return parseState(rawState);
 }
 
 // Listen for messages from the background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'forwardEventToLocalhost') {
+  if (request.action === 'forwardEventToBrowserTrajectories') {
     if (request?.event?.session !== undefined) {
       window.postMessage(
         {
@@ -46,7 +47,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ success: true });
   } else if (request.action === 'shouldListenersRun') {
     const state = getState();
-    console.log('state ', state);
     sendResponse({ run: state });
   }
 });
@@ -72,7 +72,7 @@ window.addEventListener(
 
 // Add this function to handle localStorage changes
 function handleStorageChange(event) {
-  if (event.key === 'extension-load') {
+  if (event.key === 'bt-extension-load') {
     // You can add more logic here to handle the change
     const state = parseState(event.newValue);
     chrome.runtime.sendMessage({

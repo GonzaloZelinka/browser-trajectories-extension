@@ -1,41 +1,36 @@
+// see - https://docs.google.com/document/d/1kbSELmkCa_X41sWa_pSdlWhqDW2PqwGmGu3PoqF8Otg/edit?usp=sharing
+
 console.log('Content script loaded');
 
 let isTracking = false;
 
-// Function to initialize tracking
+// Function to initialize tracking, used for page reload/navigation
 function initializeTracking() {
   chrome.runtime.sendMessage(
     {
       action: 'shouldListenersRun',
     },
     response => {
-      console.log('shouldListenersRun runtime', response);
       isTracking = response.run;
       if (isTracking) {
         addEventListeners();
-        console.log('Tracking initialized');
       }
+      // else {
+      //   removeHighlight(); // Remove highlight when tracking is stopped
+      // }
     }
   );
-  if (isTracking) {
-    addEventListeners();
-    console.log('Tracking initialized');
-  } else {
-    removeHighlight(); // Remove highlight when tracking is stopped
-  }
 }
 
 // Add this line to initialize tracking when the script loads
 initializeTracking();
 
-// Modify the listener to store the tracking state
+// listen for activation/deactivation
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'startTracking') {
-    console.log('startTracking');
     isTracking = true;
     addEventListeners();
   } else if (request.action === 'stopTracking') {
-    console.log('stopTracking');
     isTracking = false;
     removeEventListeners();
     removeHighlight(); // Remove highlight when tracking is stopped
@@ -69,32 +64,7 @@ function removeEventListeners() {
   window.removeEventListener('scroll', handleScroll);
 }
 
-// Helper functions (to be defined elsewhere in your code)
-function isInteractableElement(element) {
-  const interactableTags = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
-  return interactableTags.includes(element.tagName) || element.onclick !== null;
-}
-
-//from https://stackoverflow.com/questions/2661818/javascript-get-xpath-of-a-node
-function getXPathForElement(element) {
-  const idx = (sib, name) =>
-    sib
-      ? idx(sib.previousElementSibling, name || sib.localName) +
-        (sib.localName == name)
-      : 1;
-  const segs = elm =>
-    !elm || elm.nodeType !== 1
-      ? ['']
-      : elm.id && document.getElementById(elm.id) === elm
-      ? [`id("${elm.id}")`]
-      : [
-          ...segs(elm.parentNode),
-          elm instanceof HTMLElement
-            ? `${elm.localName}[${idx(elm)}]`
-            : `*[local-name() = "${elm.localName}"][${idx(elm)}]`,
-        ];
-  return segs(element).join('/');
-}
+// listeners
 
 function handleClick(event) {
   const browserAction = {
@@ -123,13 +93,6 @@ function handleClick(event) {
   };
 
   sendEventBrowserTrajectories(browserAction, rawEvent);
-
-  // If the clicked element is a link, navigate after a short delay
-  // if (event.target.tagName === 'A' && event.target.href) {
-  //   setTimeout(() => {
-  //     window.location.href = event.target.href;
-  //   }, 100); // 100ms delay to ensure the event is logged
-  // }
 }
 
 function handleKeyDown(event) {
@@ -217,20 +180,6 @@ function checkNavigationType() {
   sendEventBrowserTrajectories(browserAction);
 }
 
-function sendEventBrowserTrajectories(browserAction, rawEvent) {
-  chrome.runtime.sendMessage({
-    action: 'sendEventToLocalhost',
-    browserAction,
-    rawEvent,
-  });
-}
-
-// Add this at the end of the file to ensure navigation events are captured
-if (isTracking) {
-  window.addEventListener('load', checkNavigationType);
-}
-
-// Add these new functions
 function handleMouseMove(event) {
   if (!isTracking) return;
 
@@ -249,6 +198,8 @@ function handleScroll() {
     showHighlight(highlightedElement);
   }
 }
+
+// bounding box
 
 function showHighlight(element) {
   removeHighlight(); // Remove any existing highlight
@@ -290,4 +241,45 @@ function removeHighlight() {
   if (existingHighlight) {
     existingHighlight.remove();
   }
+}
+
+// to ensure navigation events are captured
+if (isTracking) {
+  window.addEventListener('load', checkNavigationType);
+}
+
+// helpers
+
+function isInteractableElement(element) {
+  const interactableTags = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
+  return interactableTags.includes(element.tagName) || element.onclick !== null;
+}
+
+//from https://stackoverflow.com/questions/2661818/javascript-get-xpath-of-a-node
+function getXPathForElement(element) {
+  const idx = (sib, name) =>
+    sib
+      ? idx(sib.previousElementSibling, name || sib.localName) +
+        (sib.localName == name)
+      : 1;
+  const segs = elm =>
+    !elm || elm.nodeType !== 1
+      ? ['']
+      : elm.id && document.getElementById(elm.id) === elm
+      ? [`id("${elm.id}")`]
+      : [
+          ...segs(elm.parentNode),
+          elm instanceof HTMLElement
+            ? `${elm.localName}[${idx(elm)}]`
+            : `*[local-name() = "${elm.localName}"][${idx(elm)}]`,
+        ];
+  return segs(element).join('/');
+}
+
+function sendEventBrowserTrajectories(browserAction, rawEvent) {
+  chrome.runtime.sendMessage({
+    action: 'sendEventToBrowserTrajectories',
+    browserAction,
+    rawEvent,
+  });
 }

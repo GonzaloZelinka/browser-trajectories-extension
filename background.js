@@ -1,29 +1,35 @@
+// see - https://docs.google.com/document/d/1kbSELmkCa_X41sWa_pSdlWhqDW2PqwGmGu3PoqF8Otg/edit?usp=sharing
+
 console.log('Background script loaded');
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'sendEventToLocalhost') {
+  if (request.action === 'sendEventToBrowserTrajectories') {
     chrome.tabs.query({ url: 'http://localhost:3000/*' }, tabs => {
       if (tabs.length > 0) {
         chrome.tabs.sendMessage(
           tabs[0].id,
           {
-            action: 'forwardEventToLocalhost',
+            action: 'forwardEventToBrowserTrajectories',
             browserAction: request.browserAction,
             rawEvent: request.rawEvent,
           },
           response => {
             if (chrome.runtime.lastError) {
-              console.error('Error sending message:', chrome.runtime.lastError);
+              console.error(
+                '[forwardEventToBrowserTrajectories] Error sending message:',
+                chrome.runtime.lastError
+              );
             } else {
-              console.log('Message sent successfully');
+              console.log(
+                '[forwardEventToBrowserTrajectories] Message sent successfully'
+              );
             }
           }
         );
-      } else {
-        console.log('No localhost:3000 tab found');
       }
     });
   } else if (request.action === 'extensionLoadChanged') {
+    // send this message to all the tabs.
     if (request.value) {
       chrome.tabs.query({}, tabs =>
         tabs.forEach(t => {
@@ -53,13 +59,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               );
               sendResponse({ run: false });
             } else {
-              console.log('sending response');
+              console.log('[shouldListenersRun] sending response');
               sendResponse(response);
             }
           }
         );
       } else {
-        console.log('No localhost:3000 tab found');
+        console.log('[shouldListenersRun] No browser trajectories tab found');
         sendResponse({ run: false });
       }
     });
