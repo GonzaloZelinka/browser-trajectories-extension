@@ -256,24 +256,57 @@ function isInteractableElement(element) {
 }
 
 //from https://stackoverflow.com/questions/2661818/javascript-get-xpath-of-a-node
+// function getXPathForElement(element) {
+//   const idx = (sib, name) =>
+//     sib
+//       ? idx(sib.previousElementSibling, name || sib.localName) +
+//         (sib.localName == name)
+//       : 1;
+//   const segs = elm =>
+//     !elm || elm.nodeType !== 1
+//       ? ['']
+//       : elm.id && document.getElementById(elm.id) === elm
+//       ? [`id("${elm.id}")`]
+//       : [
+//           ...segs(elm.parentNode),
+//           elm instanceof HTMLElement
+//             ? `${elm.localName}[${idx(elm)}]`
+//             : `*[local-name() = "${elm.localName}"][${idx(elm)}]`,
+//         ];
+//   return segs(element).join('/');
+// }
+
+//from https://github.com/scaleapi/browser-trajectories/blob/main/src/server/browser/helpers/accessibilityTreeHelpers.ts
 function getXPathForElement(element) {
-  const idx = (sib, name) =>
-    sib
-      ? idx(sib.previousElementSibling, name || sib.localName) +
-        (sib.localName == name)
-      : 1;
-  const segs = elm =>
-    !elm || elm.nodeType !== 1
-      ? ['']
-      : elm.id && document.getElementById(elm.id) === elm
-      ? [`id("${elm.id}")`]
-      : [
-          ...segs(elm.parentNode),
-          elm instanceof HTMLElement
-            ? `${elm.localName}[${idx(elm)}]`
-            : `*[local-name() = "${elm.localName}"][${idx(elm)}]`,
-        ];
-  return segs(element).join('/');
+  if (!element) {
+    return '';
+  }
+  if (element.id !== '') {
+    return `//*[@id="${element.id}"]`;
+  }
+  if (element === document.body) {
+    return '/html/body';
+  }
+
+  let ix = 0;
+  const siblings = element.parentNode ? element.parentNode.childNodes : [];
+  for (let i = 0; i < siblings.length; i++) {
+    const sibling = siblings[i];
+    if (sibling === element) {
+      return (
+        window.getXPath(element.parentNode) +
+        '/' +
+        element.tagName.toLowerCase() +
+        '[' +
+        (ix + 1) +
+        ']'
+      );
+    }
+    if (sibling.nodeType === 1 && sibling.tagName === element.tagName) {
+      ix++;
+    }
+  }
+  return '';
 }
 
 function sendEventBrowserTrajectories(browserAction, rawEvent) {
