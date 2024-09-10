@@ -159,3 +159,61 @@ export function removeHighlight() {
     existingLabel.remove();
   }
 }
+
+export function getElementInfo(element: Element) {
+  let text: string | null = null;
+  let inputType: string | undefined = undefined;
+  let isChecked: boolean | undefined = undefined;
+  let selectedOptions: string[] | undefined = undefined;
+
+  if (element.hasAttribute("aria-label")) {
+    text = element.getAttribute("aria-label");
+  }
+
+  if (element.tagName === "IMG") {
+    text = element.getAttribute("alt");
+  }
+
+  // check if select element and get all selected options
+  if (element.tagName === "OPTION") {
+    const selectElement = element.parentElement as HTMLSelectElement;
+    selectedOptions = Array.from(
+      (selectElement as HTMLSelectElement).selectedOptions,
+    ).map((option) => option.text);
+  }
+
+  if (element.tagName === "INPUT") {
+    text = (element as HTMLInputElement).value;
+    inputType = (element as HTMLInputElement).type;
+    // because hover element has the opposite of the actual value
+    isChecked = !(element as HTMLInputElement).checked;
+  }
+
+  if (!text) {
+    const textNodes = Array.from(element.childNodes).filter(
+      (node) =>
+        node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+    );
+
+    if (textNodes.length > 0) {
+      text = textNodes.map((node) => node.textContent?.trim()).join(" ");
+    }
+  }
+
+  const rect = element.getBoundingClientRect();
+  return {
+    tagName: element.tagName,
+    text,
+    inputType,
+    isChecked,
+    selectedOptions,
+    boundingBox: {
+      x: rect.x + window.scrollX,
+      y: rect.y + window.scrollY,
+      width: rect.width,
+      height: rect.height,
+    },
+    elementId: element.id || undefined,
+    xpath: getXPathForElement(element),
+  };
+};

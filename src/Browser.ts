@@ -1,4 +1,4 @@
-import { getXPathForElement, showHighlight } from './helpers';
+import { getElementInfo, getXPathForElement, showHighlight } from './helpers';
 import { BrowserAction, BrowserState, ElementInfo } from './types';
 
 export class Browser {
@@ -6,7 +6,6 @@ export class Browser {
   lastImage?: Uint8Array;
   private boundHandleAction: (event: Event) => void;
   private boundHandleFrameNavigated: () => void;
-  private boundHandleMouseMove: (event: MouseEvent) => void;
   private boundHandleScroll: () => void;
   private highlightThrottleTimeout: number | null = null;
 
@@ -21,7 +20,6 @@ export class Browser {
     });
     this.boundHandleAction = this.handleAction.bind(this);
     this.boundHandleFrameNavigated = this.handleFrameNavigated.bind(this);
-    this.boundHandleMouseMove = this.handleMouseMove.bind(this);
     this.boundHandleScroll = this.handleScroll.bind(this);
   }
 
@@ -106,8 +104,8 @@ export class Browser {
     window.addEventListener('keyup', this.boundHandleAction);
     window.addEventListener('resize', this.boundHandleAction);
     window.addEventListener('wheel', this.boundHandleAction);
-    window.addEventListener('mousemove', this.boundHandleMouseMove);
     window.addEventListener('scroll', this.boundHandleScroll);
+    window.addEventListener('mouseover', this.boundHandleAction);
   }
 
   removeEventListeners() {
@@ -117,8 +115,8 @@ export class Browser {
     window.removeEventListener('keyup', this.boundHandleAction);
     window.removeEventListener('resize', this.boundHandleAction);
     window.removeEventListener('wheel', this.boundHandleAction);
-    window.removeEventListener('mousemove', this.boundHandleMouseMove);
     window.removeEventListener('scroll', this.boundHandleScroll);
+    window.removeEventListener('mouseover', this.boundHandleAction);
     if (this.highlightThrottleTimeout) {
       clearTimeout(this.highlightThrottleTimeout);
     }
@@ -127,7 +125,7 @@ export class Browser {
   handleAction = (event: Event) => {
     // Actions excluded from content update
     let browserAction: BrowserAction | null = null;
-    const excludedActions = ['pointerMove', 'resize', 'render', 'wheel'];
+    const excludedActions = ['mouseover', 'resize', 'render', 'wheel', 'scroll'];
     if (!excludedActions.includes(event.type)) {
       this.contentUpdated();
     }
@@ -157,7 +155,6 @@ export class Browser {
       // }
 
       if (event.type === 'click') {
-
         browserAction = {
           type: 'click',
           position: {
@@ -165,12 +162,22 @@ export class Browser {
             y: (event as MouseEvent).clientY,
           },
         };
+        const target = event.target as Element;
+        const hoveredElement = getElementInfo(target);
+        console.log('hoveredElement click', hoveredElement);
         this.changeState(state => {
+          state.hoveredElement = hoveredElement;
           state.clicks += 1;
         });
       }
 
       if (event.type === 'keydown') {
+        const target = event.target as Element;
+        const hoveredElement = getElementInfo(target);
+        console.log('hoveredElement keydown', hoveredElement);
+        this.changeState(state => {
+          state.hoveredElement = hoveredElement;
+        });
         browserAction = {
           type: 'keyDown',
           key: (event as KeyboardEvent).key,
@@ -178,6 +185,12 @@ export class Browser {
       }
 
       if (event.type === 'keyup') {
+        const target = event.target as Element;
+        const hoveredElement = getElementInfo(target);
+        console.log('hoveredElement keyup', hoveredElement);
+        this.changeState(state => {
+          state.hoveredElement = hoveredElement;
+        });
         browserAction = {
           type: 'keyUp',
           key: (event as KeyboardEvent).key,
@@ -208,12 +221,6 @@ export class Browser {
         };
       }
 
-      if (event.type === 'mousemove') {
-        const target = event.target as Element;
-
-        if (target) showHighlight(target);
-      }
-
       if (event.type === 'scroll') {
         const highlightedElement = document.elementFromPoint(
           window.innerWidth / 2,
@@ -223,6 +230,10 @@ export class Browser {
           showHighlight(highlightedElement);
         }
       }
+
+      if (event.type === 'mouseover') {
+        this.throttledShowHighlight(event.target as Element);
+      }
     } catch (e) {
       console.debug('Error handling action', e);
     }
@@ -230,10 +241,6 @@ export class Browser {
     if (browserAction) {
       this.sendEventBrowserTrajectories(browserAction, this.state);
     }
-  }
-
-  handleMouseMove(event: MouseEvent) {
-    this.throttledShowHighlight(event.target as Element);
   }
 
   handleScroll() {
@@ -342,12 +349,9 @@ export class Browser {
 
   sendEventBrowserTrajectories(browserAction: BrowserAction, browserState: BrowserState) {
     console.log('sendEventBrowserTrajectories Browser', browserAction, browserState);
-    chrome.runtime.sendMessage({
-      action: 'sendEventToBrowserTrajectories',
-      state: {
-        browserAction,
-        browserState,
-      }
+    chrome.storage.local.set({
+      browserAction: JSON.stringify(browserAction),
+      browserState: JSON.stringify(browserState)
     });
   }
 }

@@ -1,5 +1,3 @@
-
-
 export interface Rect {
   x: number;
   y: number;
@@ -30,7 +28,6 @@ export interface BrowserImage {
   image: ArrayBuffer;
 }
 
-
 export interface BrowserState {
   startedAt: number;
   time: number;
@@ -45,11 +42,11 @@ export interface BrowserState {
     width: number;
     height: number;
   };
-  hoveredElement?: ElementInfo;
-  image?: BrowserImage;
   dom?: string;
-  accessibilityTree?: string;
   elementBoundingBoxes?: ElementInfo[];
+  hoveredElement?: ElementInfo; // Add this line
+  image?: BrowserImage;
+  accessibilityTree?: string;
 }
 
 export type BrowserAction =

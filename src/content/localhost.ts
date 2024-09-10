@@ -123,4 +123,23 @@ window.addEventListener('storage', async (event) => {
   }
 });
 
+// Listen for storage changes
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local') {
+    if (changes.browserAction && changes.browserState) {
+      const browserAction = JSON.parse(changes.browserAction.newValue);
+      const browserState = JSON.parse(changes.browserState.newValue);
+
+      window.postMessage(
+        {
+          action: 'pageEvent',
+          browserAction: browserAction,
+          browserState: browserState
+        },
+        '*'
+      );
+    }
+  }
+});
+
 
