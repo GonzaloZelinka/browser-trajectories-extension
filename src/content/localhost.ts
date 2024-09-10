@@ -102,7 +102,6 @@ window.addEventListener(
     if (event.origin !== 'http://localhost:3000') return;
 
     if (event.data.action === 'extensionLoadChanged') {
-      console.log('extensionLoadChanged', event.data);
       await startTracking();
     }
   },
@@ -111,7 +110,6 @@ window.addEventListener(
 
 // Listen for localStorage changes
 window.addEventListener('storage', async (event) => {
-  console.log('storage', event);
   if (event.key === 'bt-extension-load') {
     const newState = parseState(event.newValue);
     await syncToStorage('bt-extension-load', event.newValue);
@@ -127,7 +125,6 @@ window.addEventListener('storage', async (event) => {
 
 // Listen for storage changes
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  console.log('storage', changes, areaName);
   if (areaName === 'local' && 'state' in changes && changes.state) {
     const state = JSON.parse(changes.state.newValue) as { browserAction: BrowserAction, browserState: BrowserState };
 

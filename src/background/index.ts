@@ -50,5 +50,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return;
     }
     sendResponse({ tabId: sender.tab.id });
+  } else if (request.action === 'captureScreenshot') {
+    if (!sender.tab || !sender.tab.id) {
+      console.error('[captureScreenshot] No tabId found');
+      return;
+    }
+    chrome.tabs.captureVisibleTab(sender.tab.windowId, { format: 'png' }, (dataUrl) => {
+      if (chrome.runtime.lastError) {
+        console.error('Error capturing screenshot:', chrome.runtime.lastError);
+        sendResponse({ error: chrome.runtime.lastError.message });
+      } else {
+        console.log('captureScreenshot', dataUrl);
+        // Send the dataUrl directly
+        sendResponse({ image: dataUrl });
+      }
+    });
+    return true; // Indicates that the response will be sent asynchronously
   }
 });

@@ -1,5 +1,5 @@
 import { getElementInfo, getXPathForElement, showHighlight } from './helpers';
-import { BrowserAction, BrowserState, ElementInfo } from './types';
+import { BrowserAction, BrowserState, ElementInfo, BrowserImage } from './types';
 
 export class Browser {
   state: BrowserState;
@@ -57,28 +57,56 @@ export class Browser {
     this.lastImage = undefined;
     this.updateScroll();
 
+    let browserAction: BrowserAction | null = null;
+    const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+
+    if (navigation.type === 'reload') {
+      console.log('navigation type: reload');
+      browserAction = {
+        type: 'pageReload',
+      };
+    } else if (navigation.type === 'navigate') {
+      console.log('navigation type: navigate');
+      browserAction = {
+        type: 'navigate',
+        url: window.location.href,
+      };
+    }
+
     this.changeState(state => {
       state.url = window.location.href;
     });
+
+    if (browserAction) {
+      this.sendEventBrowserTrajectories(browserAction, this.state);
+    }
   }
 
   async contentUpdated() {
+    console.log('contentUpdated');
     try {
+      // Attempt to capture screenshot
+      const start = performance.now();
+      const browserImage = await this.captureBrowserImage();
+      const end = performance.now();
+
       // Get the DOM content
       const dom = document.documentElement.outerHTML;
 
       const elementBoundingBoxes = this.captureElementBoundingBoxes();
 
       this.changeState(state => {
+        console.log('state', state);
         state.dom = dom;
-        // TODO: get accessibility tree, we can use puppeteer to get it - see background.ts
-        // state.accessibilityTree = response.tree;
         state.elementBoundingBoxes = elementBoundingBoxes;
+        if (browserImage) {
+          state.image = browserImage;
+        }
       });
 
-      this
+      // ... rest of the method ...
     } catch (e) {
-      console.debug('Error updating content', e);
+      console.log('Error updating content', e);
     }
   }
 
@@ -96,6 +124,37 @@ export class Browser {
     });
   }
 
+  async captureBrowserImage(): Promise<BrowserImage | undefined> {
+    try {
+      return new Promise((resolve) => {
+        chrome.runtime.sendMessage({ action: 'captureScreenshot' }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.error('Error capturing screenshot:', chrome.runtime.lastError);
+            resolve(undefined);
+          } else if (response && response.image) {
+            const image: BrowserImage = {
+              timestamp: Date.now(),
+              rect: {
+                x: window.scrollX,
+                y: window.scrollY,
+                width: window.innerWidth,
+                height: window.innerHeight
+              },
+              image: response.image
+            };
+            resolve(image);
+          } else {
+            console.error('Invalid response from background script');
+            resolve(undefined);
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Error in captureBrowserImage:', error);
+      return undefined;
+    }
+  }
+
   addEventListeners() {
     window.addEventListener('load', this.boundHandleFrameNavigated);
     window.addEventListener('click', this.boundHandleAction, { capture: true });
@@ -105,6 +164,7 @@ export class Browser {
     window.addEventListener('wheel', this.boundHandleAction);
     window.addEventListener('scroll', this.boundHandleScroll);
     window.addEventListener('mouseover', this.boundHandleAction);
+    window.addEventListener('load', this.boundHandleFrameNavigated);
   }
 
   removeEventListeners() {
@@ -116,6 +176,7 @@ export class Browser {
     window.removeEventListener('wheel', this.boundHandleAction);
     window.removeEventListener('scroll', this.boundHandleScroll);
     window.removeEventListener('mouseover', this.boundHandleAction);
+    window.removeEventListener('load', this.boundHandleFrameNavigated);
     if (this.highlightThrottleTimeout) {
       clearTimeout(this.highlightThrottleTimeout);
     }
@@ -130,19 +191,6 @@ export class Browser {
     }
 
     try {
-      if (event.type === 'navigate') {
-        browserAction = {
-          type: 'navigate',
-          url: window.location.href,
-        };
-      }
-
-      if (event.type === 'popstate') {
-        browserAction = {
-          type: 'pageBack',
-        };
-      }
-
       if (event.type === 'reload') {
         browserAction = {
           type: 'pageReload',
@@ -347,7 +395,6 @@ export class Browser {
   }
 
   sendEventBrowserTrajectories(browserAction: BrowserAction, browserState: BrowserState) {
-    console.log('sendEventBrowserTrajectories Browser', browserAction, browserState);
     chrome.storage.local.set({
       state: JSON.stringify({
         browserAction,

@@ -1,6 +1,5 @@
 
 export function getXPathForElement(element: Element): string {
-  console.log('element', element);
   if (!element) {
     return "";
   }

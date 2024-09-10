@@ -30,8 +30,6 @@ async function initializeTracking() {
   const tabId = await getTabId();
   const currentTabId = await getCurrentTabId();
 
-  console.log('state', state, 'tabId', tabId, 'currentTabId', currentTabId);
-
   if (state && tabId === currentTabId.toString()) {
     startTracking();
   } else {
