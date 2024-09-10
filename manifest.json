@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Red Sidebar Extension",
-  "version": "1.0",
+  "version": "1.0.0",
   "description": "Adds a red sidebar to the left side of the page",
   "permissions": [
     "activeTab",
