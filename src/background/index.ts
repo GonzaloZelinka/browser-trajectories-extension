@@ -3,6 +3,18 @@
 
 console.log('Background script loaded');
 
+let tabTree: { [key: number]: number | null } = {};
+
+chrome.tabs.onCreated.addListener((tab) => {
+  if (tab.openerTabId) {
+    tabTree[tab.id!] = tab.openerTabId;
+  }
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  delete tabTree[tabId];
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'sendEventToBrowserTrajectories') {
     chrome.tabs.query({ url: 'http://localhost:3000/*' }, tabs => {
@@ -55,7 +67,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       console.error('[captureScreenshot] No tabId found');
       return;
     }
-    chrome.tabs.captureVisibleTab(sender.tab.windowId, { format: 'png' }, (dataUrl) => {
+    chrome.tabs.captureVisibleTab(sender.tab.windowId, { format: 'jpeg' }, (dataUrl) => {
       if (chrome.runtime.lastError) {
         console.error('Error capturing screenshot:', chrome.runtime.lastError);
         sendResponse({ error: chrome.runtime.lastError.message });
@@ -66,5 +78,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     });
     return true; // Indicates that the response will be sent asynchronously
+  } else if (request.action === 'isDescendantTab') {
+    const { currentTabId, originalTabId } = request;
+    let isDescendant = false;
+    let checkTabId = currentTabId;
+
+    while (checkTabId) {
+      if (checkTabId === originalTabId) {
+        isDescendant = true;
+        break;
+      }
+      checkTabId = tabTree[checkTabId] || null;
+    }
+
+    sendResponse({ isDescendant });
+    return true;
   }
 });

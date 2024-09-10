@@ -27,10 +27,10 @@ function stopTracking() {
 
 async function initializeTracking() {
   const state = await getState();
-  const tabId = await getTabId();
+  const originalTabId = await getOriginalTabId();
   const currentTabId = await getCurrentTabId();
 
-  if (state && tabId === currentTabId.toString()) {
+  if (state && await isDescendantTab(currentTabId, originalTabId)) {
     startTracking();
   } else {
     stopTracking();
@@ -45,10 +45,18 @@ async function getState(): Promise<boolean> {
   });
 }
 
-async function getTabId(): Promise<string | null> {
+async function getOriginalTabId(): Promise<number | null> {
   return new Promise((resolve) => {
     chrome.storage.local.get('extension-original-tab-id', (result) => {
-      resolve(result['extension-original-tab-id'] || null);
+      resolve(result['extension-original-tab-id'] ? parseInt(result['extension-original-tab-id']) : null);
+    });
+  });
+}
+
+async function isDescendantTab(currentTabId: number, originalTabId: number | null): Promise<boolean> {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ action: 'isDescendantTab', currentTabId, originalTabId }, (response) => {
+      resolve(response.isDescendant);
     });
   });
 }

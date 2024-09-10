@@ -116,7 +116,7 @@ window.addEventListener('storage', async (event) => {
     if (newState === false) {
       await removeTabId();
       await setState(false);
-      await syncToStorage('browserState', null);
+      // await syncToStorage('browserState', null);
     }
   } else if (event.key === 'extension-original-tab-id') {
     await syncToStorage('extension-original-tab-id', event.newValue);

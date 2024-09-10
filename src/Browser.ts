@@ -182,12 +182,12 @@ export class Browser {
     }
   }
 
-  handleAction = (event: Event) => {
+  handleAction = async (event: Event) => {
     // Actions excluded from content update
     let browserAction: BrowserAction | null = null;
     const excludedActions = ['mouseover', 'resize', 'render', 'wheel', 'scroll'];
     if (!excludedActions.includes(event.type)) {
-      this.contentUpdated();
+      await this.contentUpdated();
     }
 
     try {
