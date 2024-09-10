@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Red Sidebar Extension",
+  "name": "BT Extension",
   "version": "1.0.0",
-  "description": "Adds a red sidebar to the left side of the page",
+  "description": "Browser Trajectories Extension",
   "permissions": [
     "activeTab",
     "tabs",
@@ -13,6 +13,7 @@
   ],
   "host_permissions": [
     "http://localhost:3000/*",
+    "https://browser.labeling.app/*",
     "<all_urls>"
   ],
   "background": {
@@ -27,7 +28,8 @@
         "<all_urls>"
       ],
       "exclude_matches": [
-        "http://localhost:3000/*"
+        "http://localhost:3000/*",
+        "https://browser.labeling.app/*"
       ],
       "js": [
         "content.js"
@@ -37,10 +39,11 @@
     },
     {
       "matches": [
-        "http://localhost:3000/*"
+        "http://localhost:3000/*",
+        "https://browser.labeling.app/*"
       ],
       "js": [
-        "localhost_content.js"
+        "browserTrajectories_content.js"
       ],
       "run_at": "document_start"
     }

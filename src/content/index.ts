@@ -7,7 +7,7 @@ let browser: Browser | null = null;
 
 initializeTracking();
 
-function startTracking() {
+async function startTracking() {
   if (!browser) {
     browser = new Browser();
   }
@@ -27,11 +27,17 @@ function stopTracking() {
 
 async function initializeTracking() {
   const state = await getState();
-  const tabId = await getTabId();
+  const originalTabId = await getTabId();
   const currentTabId = await getCurrentTabId();
 
-  if (state && tabId === currentTabId.toString()) {
-    startTracking();
+
+  if (state && originalTabId) {
+    const isDescendant = await checkIsDescendantTab(currentTabId, parseInt(originalTabId));
+    if (isDescendant) {
+      startTracking();
+    } else {
+      stopTracking();
+    }
   } else {
     stopTracking();
   }
@@ -58,6 +64,17 @@ async function getCurrentTabId(): Promise<number> {
     chrome.runtime.sendMessage({ action: 'getCurrentTabId' }, (response) => {
       resolve(response.tabId);
     });
+  });
+}
+
+async function checkIsDescendantTab(currentTabId: number, originalTabId: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(
+      { action: 'isDescendantTab', currentTabId, originalTabId },
+      (response) => {
+        resolve(response.isDescendant);
+      }
+    );
   });
 }
 

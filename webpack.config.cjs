@@ -7,7 +7,7 @@ module.exports = {
   entry: {
     background: './src/background/index.ts',
     content: './src/content/index.ts',
-    localhost_content: './src/content/localhost.ts',
+    browserTrajectories_content: './src/content/browserTrajectories.ts',
   },
   output: {
     filename: '[name].js',

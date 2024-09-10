@@ -164,7 +164,6 @@ export class Browser {
     window.addEventListener('wheel', this.boundHandleAction);
     window.addEventListener('scroll', this.boundHandleScroll);
     window.addEventListener('mouseover', this.boundHandleAction);
-    window.addEventListener('load', this.boundHandleFrameNavigated);
   }
 
   removeEventListeners() {
@@ -176,7 +175,6 @@ export class Browser {
     window.removeEventListener('wheel', this.boundHandleAction);
     window.removeEventListener('scroll', this.boundHandleScroll);
     window.removeEventListener('mouseover', this.boundHandleAction);
-    window.removeEventListener('load', this.boundHandleFrameNavigated);
     if (this.highlightThrottleTimeout) {
       clearTimeout(this.highlightThrottleTimeout);
     }

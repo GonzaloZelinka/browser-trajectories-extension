@@ -21,7 +21,6 @@ async function removeTabId(): Promise<void> {
 }
 
 async function setState(newState: boolean | null): Promise<void> {
-  console.log('setState', newState);
   localStorage.setItem('bt-extension-load', newState?.toString() ?? 'null');
   await syncToStorage('bt-extension-load', newState?.toString() ?? 'null');
 }
@@ -64,7 +63,7 @@ async function openTrackingTab() {
     // TODO - fix type
     const response: any = await new Promise((resolve, reject) => {
       chrome.runtime.sendMessage(
-        { action: 'createNewTab', url: 'https://www.google.com' },
+        { action: 'createNewTab', url: 'about:blank' },
         response => {
           if (chrome.runtime.lastError) {
             reject(chrome.runtime.lastError);
@@ -92,7 +91,7 @@ async function openTrackingTab() {
 window.addEventListener(
   'message',
   async event => {
-    if (event.origin !== 'http://localhost:3000') return;
+    if (event.origin !== 'http://localhost:3000' && event.origin !== 'https://browser.labeling.app') return;
 
     if (event.data.action === 'extensionLoadChanged') {
       await setState(true);
