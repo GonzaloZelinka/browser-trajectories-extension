@@ -1,6 +1,3 @@
-import { BrowserState } from "../types";
-
-// see - https://docs.google.com/document/d/1kbSELmkCa_X41sWa_pSdlWhqDW2PqwGmGu3PoqF8Otg/edit?usp=sharing
 console.log('Background script loaded');
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {

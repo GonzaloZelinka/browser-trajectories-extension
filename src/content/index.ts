@@ -65,7 +65,6 @@ async function getCurrentTabId(): Promise<number> {
 
 // Listen for storage changes
 chrome.storage.onChanged.addListener(async (changes, areaName) => {
-  console.log('storage', changes, areaName);
   if (areaName === 'local' && (changes['bt-extension-load'] || changes['extension-original-tab-id'])) {
     await initializeTracking();
   }

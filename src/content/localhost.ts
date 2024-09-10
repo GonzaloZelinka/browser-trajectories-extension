@@ -1,3 +1,5 @@
+import { BrowserAction, BrowserState } from "../types";
+
 console.log('bt content script loaded');
 
 function parseState(rawState: string | null): boolean {
@@ -125,21 +127,20 @@ window.addEventListener('storage', async (event) => {
 
 // Listen for storage changes
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === 'local') {
-    if (changes.browserAction && changes.browserState) {
-      const browserAction = JSON.parse(changes.browserAction.newValue);
-      const browserState = JSON.parse(changes.browserState.newValue);
+  console.log('storage', changes, areaName);
+  if (areaName === 'local' && 'state' in changes && changes.state) {
+    const state = JSON.parse(changes.state.newValue) as { browserAction: BrowserAction, browserState: BrowserState };
 
-      window.postMessage(
-        {
-          action: 'pageEvent',
-          browserAction: browserAction,
-          browserState: browserState
-        },
-        '*'
-      );
-    }
+    window.postMessage(
+      {
+        action: 'pageEvent',
+        browserAction: state.browserAction,
+        browserState: state.browserState
+      },
+      '*'
+    );
   }
+
 });
 
 

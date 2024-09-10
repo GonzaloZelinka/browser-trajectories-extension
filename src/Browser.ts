@@ -350,8 +350,10 @@ export class Browser {
   sendEventBrowserTrajectories(browserAction: BrowserAction, browserState: BrowserState) {
     console.log('sendEventBrowserTrajectories Browser', browserAction, browserState);
     chrome.storage.local.set({
-      browserAction: JSON.stringify(browserAction),
-      browserState: JSON.stringify(browserState)
+      state: JSON.stringify({
+        browserAction,
+        browserState
+      }),
     });
   }
 }
