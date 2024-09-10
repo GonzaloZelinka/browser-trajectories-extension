@@ -2,20 +2,13 @@ import { BrowserAction, BrowserState } from "../types";
 
 console.log('bt content script loaded');
 
-function parseState(rawState: string | null): boolean {
+function parseState(rawState: string | null): boolean | null {
+  console.log('parseState', rawState);
+  if (rawState === 'null') {
+    return null;
+  }
   return rawState === 'true';
-}
 
-async function getState(): Promise<boolean> {
-  return parseState(localStorage.getItem('bt-extension-load'));
-}
-
-async function getTabId(): Promise<string | null> {
-  return new Promise((resolve) => {
-    chrome.storage.local.get('extension-original-tab-id', (result) => {
-      resolve(result['extension-original-tab-id'] || null);
-    });
-  });
 }
 
 async function setTabId(newTabId: string): Promise<void> {
@@ -27,9 +20,10 @@ async function removeTabId(): Promise<void> {
   await syncToStorage('extension-original-tab-id', null);
 }
 
-async function setState(newState: boolean): Promise<void> {
-  localStorage.setItem('bt-extension-load', newState.toString());
-  await syncToStorage('bt-extension-load', newState.toString());
+async function setState(newState: boolean | null): Promise<void> {
+  console.log('setState', newState);
+  localStorage.setItem('bt-extension-load', newState?.toString() ?? 'null');
+  await syncToStorage('bt-extension-load', newState?.toString() ?? 'null');
 }
 
 async function syncToStorage(key: string, value: string | null): Promise<void> {
@@ -65,7 +59,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   }
 });
 
-async function startTracking() {
+async function openTrackingTab() {
   try {
     // TODO - fix type
     const response: any = await new Promise((resolve, reject) => {
@@ -89,12 +83,11 @@ async function startTracking() {
     console.log('newTabId', newTabId);
 
     await setTabId(newTabId.toString());
-    await setState(true);
+    await setState(false);
   } catch (error) {
     console.error('Error creating new tab:', error);
   }
 }
-
 // Add this event listener to receive messages from the app
 window.addEventListener(
   'message',
@@ -102,7 +95,10 @@ window.addEventListener(
     if (event.origin !== 'http://localhost:3000') return;
 
     if (event.data.action === 'extensionLoadChanged') {
-      await startTracking();
+      await setState(true);
+    } else if (event.data.action === 'openTrackingTab') {
+      console.log('openTrackingTab');
+      await openTrackingTab();
     }
   },
   false
@@ -110,12 +106,13 @@ window.addEventListener(
 
 // Listen for localStorage changes
 window.addEventListener('storage', async (event) => {
+  console.log('storage', event);
   if (event.key === 'bt-extension-load') {
     const newState = parseState(event.newValue);
     await syncToStorage('bt-extension-load', event.newValue);
-    if (newState === false) {
+    if (newState === null) {
       await removeTabId();
-      await setState(false);
+      await setState(null);
       // await syncToStorage('browserState', null);
     }
   } else if (event.key === 'extension-original-tab-id') {
