@@ -6,17 +6,18 @@
   "permissions": [
     "activeTab",
     "tabs",
-    "windows"
+    "windows",
+    "storage"
   ],
   "host_permissions": [
     "http://localhost:3000/*",
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.bundle.js"
+    "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "index.html"
   },
   "content_scripts": [
     {
@@ -27,7 +28,7 @@
         "http://localhost:3000/*"
       ],
       "js": [
-        "content.bundle.js"
+        "content.js"
       ],
       "run_at": "document_start",
       "persistent": true
@@ -37,7 +38,7 @@
         "http://localhost:3000/*"
       ],
       "js": [
-        "localhost_content.bundle.js"
+        "localhost_content.js"
       ],
       "run_at": "document_start"
     }
