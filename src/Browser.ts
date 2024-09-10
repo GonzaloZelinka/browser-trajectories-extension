@@ -6,6 +6,9 @@ export class Browser {
   lastImage?: Uint8Array;
   private boundHandleAction: (event: Event) => void;
   private boundHandleFrameNavigated: () => void;
+  private boundHandleMouseMove: (event: MouseEvent) => void;
+  private boundHandleScroll: () => void;
+  private highlightThrottleTimeout: number | null = null;
 
   constructor() {
     this.state = {
@@ -18,6 +21,8 @@ export class Browser {
     });
     this.boundHandleAction = this.handleAction.bind(this);
     this.boundHandleFrameNavigated = this.handleFrameNavigated.bind(this);
+    this.boundHandleMouseMove = this.handleMouseMove.bind(this);
+    this.boundHandleScroll = this.handleScroll.bind(this);
   }
 
   async loadState(): Promise<BrowserState | null> {
@@ -101,6 +106,8 @@ export class Browser {
     window.addEventListener('keyup', this.boundHandleAction);
     window.addEventListener('resize', this.boundHandleAction);
     window.addEventListener('wheel', this.boundHandleAction);
+    window.addEventListener('mousemove', this.boundHandleMouseMove);
+    window.addEventListener('scroll', this.boundHandleScroll);
   }
 
   removeEventListeners() {
@@ -110,6 +117,11 @@ export class Browser {
     window.removeEventListener('keyup', this.boundHandleAction);
     window.removeEventListener('resize', this.boundHandleAction);
     window.removeEventListener('wheel', this.boundHandleAction);
+    window.removeEventListener('mousemove', this.boundHandleMouseMove);
+    window.removeEventListener('scroll', this.boundHandleScroll);
+    if (this.highlightThrottleTimeout) {
+      clearTimeout(this.highlightThrottleTimeout);
+    }
   }
 
   handleAction = (event: Event) => {
@@ -218,6 +230,30 @@ export class Browser {
     if (browserAction) {
       this.sendEventBrowserTrajectories(browserAction, this.state);
     }
+  }
+
+  handleMouseMove(event: MouseEvent) {
+    this.throttledShowHighlight(event.target as Element);
+  }
+
+  handleScroll() {
+    const highlightedElement = document.elementFromPoint(
+      window.innerWidth / 2,
+      window.innerHeight / 2
+    );
+    if (highlightedElement) {
+      this.throttledShowHighlight(highlightedElement);
+    }
+  }
+
+  throttledShowHighlight(element: Element) {
+    if (this.highlightThrottleTimeout) {
+      clearTimeout(this.highlightThrottleTimeout);
+    }
+    this.highlightThrottleTimeout = window.setTimeout(() => {
+      showHighlight(element);
+      this.highlightThrottleTimeout = null;
+    }, 5);
   }
 
   changeState(updater: (state: BrowserState) => void) {

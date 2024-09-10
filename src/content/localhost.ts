@@ -1,11 +1,5 @@
 console.log('bt content script loaded');
 
-const state = localStorage.getItem('bt-extension-load');
-if (!state) {
-  localStorage.setItem('bt-extension-load', 'false');
-  syncToStorage('bt-extension-load', 'false');
-}
-
 function parseState(rawState: string | null): boolean {
   return rawState === 'true';
 }
@@ -37,8 +31,8 @@ async function setState(newState: boolean): Promise<void> {
 }
 
 async function syncToStorage(key: string, value: string | null): Promise<void> {
-  console.log('syncToStorage', key, value);
   return new Promise((resolve) => {
+    console.log('syncToStorage', key, value);
     chrome.storage.local.set({ [key]: value }, resolve);
   });
 }
@@ -122,6 +116,7 @@ window.addEventListener('storage', async (event) => {
     if (newState === false) {
       await removeTabId();
       await setState(false);
+      await syncToStorage('browserState', null);
     }
   } else if (event.key === 'extension-original-tab-id') {
     await syncToStorage('extension-original-tab-id', event.newValue);
