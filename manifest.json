@@ -7,7 +7,9 @@
     "activeTab",
     "tabs",
     "windows",
-    "storage"
+    "storage",
+    "scripting",
+    "debugger"
   ],
   "host_permissions": [
     "http://localhost:3000/*",

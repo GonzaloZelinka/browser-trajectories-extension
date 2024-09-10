@@ -1,6 +1,5 @@
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
   mode: 'production',
@@ -33,9 +32,6 @@ module.exports = {
     extensions: ['.tsx', '.ts', '.js'],
   },
   plugins: [
-    //   new HtmlWebpackPlugin({
-    //     template: './src/index.html',
-    //   }),
     new CopyPlugin({
       patterns: [
         { from: path.resolve('manifest.json'), to: path.resolve('dist') },
@@ -43,8 +39,4 @@ module.exports = {
     }),
   ],
   watch: true,
-  // devtool: 'cheap-source-map',
-  // optimization: {
-  //   minimize: false,
-  // },
 };

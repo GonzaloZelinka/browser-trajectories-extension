@@ -62,32 +62,17 @@ export class Browser {
     });
   }
 
-  contentUpdated() {
+  async contentUpdated() {
     try {
       // Get the DOM content
       const dom = document.documentElement.outerHTML;
 
-      // const snapshot = await this.page.accessibility.snapshot({
-      //   interestingOnly: true,
-      // });
-
-      // if (!snapshot) {
-      //   throw Error('No accessibility snapshot');
-      // }
-
-      // const frame = this.page.mainFrame();
-      // const framesPage = frame.page();
-
-      // const snapshotWithIds = await addId(snapshot, framesPage);
-
-      // const snapshotString = formatNode(snapshotWithIds);
-
-      // Capture element bounding boxes
       const elementBoundingBoxes = this.captureElementBoundingBoxes();
 
       this.changeState(state => {
         state.dom = dom;
-        // state.accessibilityTree = snapshotString;
+        // TODO: get accessibility tree, we can use puppeteer to get it - see background.ts
+        // state.accessibilityTree = response.tree;
         state.elementBoundingBoxes = elementBoundingBoxes;
       });
 
@@ -95,6 +80,20 @@ export class Browser {
     } catch (e) {
       console.debug('Error updating content', e);
     }
+  }
+
+  async getCurrentTabId(): Promise<number> {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage({ action: 'getCurrentTabId' }, (response) => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+        } else if (response && response.tabId) {
+          resolve(response.tabId);
+        } else {
+          reject(new Error('Unable to get current tab ID'));
+        }
+      });
+    });
   }
 
   addEventListeners() {

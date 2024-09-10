@@ -1,3 +1,4 @@
+
 export interface Rect {
   x: number;
   y: number;
@@ -64,11 +65,3 @@ export type BrowserAction =
   | { type: "wheel"; position: { x: number; y: number }; delta: { x: number; y: number } }
   | { type: "keyDown"; key: string }
   | { type: "keyUp"; key: string };
-
-// @ts-ignore
-export interface SerializedAXNodeWithId extends SerializedAXNode {
-  id: number;
-  xpath: string;
-  children?: SerializedAXNodeWithId[];
-  [key: string]: any;
-}

@@ -1,3 +1,6 @@
+// for puppeteer
+// const connectionManager = new ConnectionManager();
+
 console.log('Background script loaded');
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {

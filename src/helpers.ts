@@ -1,8 +1,6 @@
-// @ts-nocheck
-import { SerializedAXNodeWithId } from "./src/types";
-
 
 export function getXPathForElement(element: Element): string {
+  console.log('element', element);
   if (!element) {
     return "";
   }
@@ -32,78 +30,6 @@ export function getXPathForElement(element: Element): string {
     }
   }
   return '';
-}
-
-export function formatNode(
-  node: SerializedAXNodeWithId,
-  depth: number = 0,
-): string {
-  const indent = "  ".repeat(depth);
-  const idPart = node.id !== undefined ? `[${node.id}] ` : "";
-  const namePart = node.name ? `'${node.name}'` : "";
-
-  // Add additional attributes that are not role, name, id, or children or elementHandle
-  const additionalAttributes = Object.keys(node)
-    .filter(
-      (key) =>
-        !["role", "name", "id", "children", "elementHandle"].includes(key),
-    )
-    .map((key) => `${key}: '${node[key]}'`)
-    .join(" ");
-
-  let line = `${indent}${idPart}${node.role} ${namePart}`;
-  if (additionalAttributes) {
-    line += ` ${additionalAttributes}`;
-  }
-
-  if (node.children && node.children.length > 0) {
-    line +=
-      "\n" +
-      node.children.map((child) => formatNode(child, depth + 1)).join("\n");
-  }
-
-  return line;
-}
-
-export async function addIdHelper(
-  node: SerializedAXNode,
-  page: Page,
-  idCounter: { currentId: number },
-): Promise<SerializedAXNodeWithId> {
-  let xpath = "";
-  const elementHandle = await node.elementHandle();
-  if (elementHandle) {
-    xpath = await elementHandle.evaluate((element) => {
-      return getXPathForElement(element);
-    });
-  }
-
-  const { children, ...rest } = node; // Destructure to exclude 'skipField'
-
-  const nodeWithId: SerializedAXNodeWithId = {
-    ...rest, // Spread the rest of the fields
-    id: idCounter.currentId++, // Assign current ID and then increment
-    xpath,
-  };
-
-  if (node.children) {
-    nodeWithId.children = await Promise.all(
-      node.children.map(
-        async (child) => await addIdHelper(child, page, idCounter), // Await the promise
-      ),
-    );
-  }
-
-  return nodeWithId;
-}
-
-export async function addId(
-  node: SerializedAXNode,
-  page: any,
-  startingId: number = 1,
-): Promise<SerializedAXNodeWithId> {
-  const idCounter = { currentId: startingId }; // Initialize a counter object
-  return await addIdHelper(node, page, idCounter); // Start the recursive process
 }
 
 export function showHighlight(element: Element) {
