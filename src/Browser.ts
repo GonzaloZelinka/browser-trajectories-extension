@@ -1,15 +1,15 @@
-import { getElementInfo, getXPathForElement, showHighlight } from './helpers';
-import { BrowserAction, BrowserState, ElementInfo, BrowserImage } from './types';
+import { BrowserHelper } from './BrowserHelper';
+import { BrowserScreencast } from './BrowserScreencast';
+import { BrowserAction, BrowserState, BrowserImage } from './types';
 
 export class Browser {
   state: BrowserState;
   lastImage?: Uint8Array;
   private boundHandleAction: (event: Event) => void;
   private boundHandleScroll: () => void;
-  private highlightThrottleTimeout: number | null = null;
   private captureScreenshotDebounced: () => void;
-  private captureScreenshotTimeout: NodeJS.Timeout | null = null;
-  private isCapturingScreenshot: boolean = false;
+  private browserHelper: BrowserHelper;
+  private browserScreencast: BrowserScreencast;
 
   constructor() {
     this.state = {
@@ -22,7 +22,14 @@ export class Browser {
     });
     this.boundHandleAction = this.handleAction.bind(this);
     this.boundHandleScroll = this.handleScroll.bind(this);
-    this.captureScreenshotDebounced = this.debounce(this.captureScreenshot.bind(this), 250);
+
+    this.browserHelper = new BrowserHelper();
+    this.browserScreencast = new BrowserScreencast();
+
+    this.captureScreenshotDebounced = this.browserScreencast.debouncedCaptureScreenshot(
+      this.updateStateWithScreenshot.bind(this),
+      250
+    );
 
     // Add listener for messages from background script
     chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
@@ -61,11 +68,10 @@ export class Browser {
   async contentUpdated() {
     console.log('contentUpdated');
     try {
-
       // Get the DOM content
       const dom = document.documentElement.outerHTML;
 
-      const elementBoundingBoxes = this.captureElementBoundingBoxes();
+      const elementBoundingBoxes = this.browserHelper.captureElementBoundingBoxes();
 
       this.changeState(state => {
         state.dom = dom;
@@ -79,58 +85,10 @@ export class Browser {
     }
   }
 
-  parseScreenshot(dataUrl: string): BrowserImage {
-    return {
-      timestamp: Date.now(),
-      rect: {
-        x: window.scrollX,
-        y: window.scrollY,
-        width: window.innerWidth,
-        height: window.innerHeight
-      },
-      image: dataUrl
-    }
-  }
-
-  async captureBrowserImage(): Promise<BrowserImage | undefined> {
-    try {
-      return new Promise((resolve) => {
-        chrome.runtime.sendMessage({ action: 'captureScreenshot' }, (response) => {
-          if (chrome.runtime.lastError) {
-            console.error('Error capturing screenshot:', chrome.runtime.lastError);
-            resolve(undefined);
-          } else if (response && response.image) {
-            const image = this.parseScreenshot(response.image);
-            resolve(image);
-          } else {
-            console.error('Invalid response from background script');
-            resolve(undefined);
-          }
-        });
-      });
-    } catch (error) {
-      console.error('Error in captureBrowserImage:', error);
-      return undefined;
-    }
-  }
-
-  async captureScreenshot() {
-    if (this.isCapturingScreenshot) return;
-
-    this.isCapturingScreenshot = true;
-
-    try {
-      const browserImage = await this.captureBrowserImage();
-      if (browserImage) {
-        this.changeState(state => {
-          state.image = browserImage;
-        });
-      }
-    } catch (error) {
-      console.error('Error capturing screenshot:', error);
-    } finally {
-      this.isCapturingScreenshot = false;
-    }
+  updateStateWithScreenshot(browserImage: BrowserImage) {
+    this.changeState(state => {
+      state.image = browserImage;
+    });
   }
 
   addEventListeners() {
@@ -151,9 +109,6 @@ export class Browser {
     window.removeEventListener('wheel', this.boundHandleAction);
     window.removeEventListener('scroll', this.boundHandleScroll);
     window.removeEventListener('mouseover', this.boundHandleAction);
-    if (this.highlightThrottleTimeout) {
-      clearTimeout(this.highlightThrottleTimeout);
-    }
   }
 
   handleAction = async (event: Event) => {
@@ -184,7 +139,7 @@ export class Browser {
           },
         };
         const target = event.target as Element;
-        const hoveredElement = getElementInfo(target);
+        const hoveredElement = this.browserHelper.getElementInfo(target);
         console.log('hoveredElement click', hoveredElement);
         this.changeState(state => {
           state.hoveredElement = hoveredElement;
@@ -194,7 +149,7 @@ export class Browser {
 
       if (event.type === 'keydown') {
         const target = event.target as Element;
-        const hoveredElement = getElementInfo(target);
+        const hoveredElement = this.browserHelper.getElementInfo(target);
         console.log('hoveredElement keydown', hoveredElement);
         this.changeState(state => {
           state.hoveredElement = hoveredElement;
@@ -207,7 +162,7 @@ export class Browser {
 
       if (event.type === 'keyup') {
         const target = event.target as Element;
-        const hoveredElement = getElementInfo(target);
+        const hoveredElement = this.browserHelper.getElementInfo(target);
         console.log('hoveredElement keyup', hoveredElement);
         this.changeState(state => {
           state.hoveredElement = hoveredElement;
@@ -243,17 +198,11 @@ export class Browser {
       }
 
       if (event.type === 'scroll') {
-        const highlightedElement = document.elementFromPoint(
-          window.innerWidth / 2,
-          window.innerHeight / 2
-        );
-        if (highlightedElement) {
-          showHighlight(highlightedElement);
-        }
+        this.browserHelper.handleScroll();
       }
 
       if (event.type === 'mouseover') {
-        this.throttledShowHighlight(event.target as Element);
+        this.browserHelper.throttledShowHighlight(event.target as Element);
       }
     } catch (e) {
       console.debug('Error handling action', e);
@@ -265,107 +214,12 @@ export class Browser {
   }
 
   handleScroll() {
-    const highlightedElement = document.elementFromPoint(
-      window.innerWidth / 2,
-      window.innerHeight / 2
-    );
-    if (highlightedElement) {
-      this.throttledShowHighlight(highlightedElement);
-    }
-  }
-
-  throttledShowHighlight(element: Element) {
-    if (this.highlightThrottleTimeout) {
-      clearTimeout(this.highlightThrottleTimeout);
-    }
-    this.highlightThrottleTimeout = window.setTimeout(() => {
-      showHighlight(element);
-      this.highlightThrottleTimeout = null;
-    }, 5);
+    this.browserHelper.handleScroll();
   }
 
   changeState(updater: (state: BrowserState) => void) {
     updater(this.state);
     this.saveState();
-  }
-
-  captureElementBoundingBoxes(): ElementInfo[] {
-    const interactableSelectors = [
-      'a[href]:not(:has(img))',
-      'a[href] img',
-      'button',
-      'input:not([type="hidden"])',
-      'textarea',
-      'select',
-      '[tabindex]:not([tabindex="-1"])',
-      '[contenteditable="true"]',
-      '[role="button"]',
-      '[role="link"]',
-      '[role="checkbox"]',
-      '[role="menuitem"]',
-      '[role="tab"]',
-      '[draggable="true"]',
-      '.btn',
-      'a[href="/notifications"]',
-      'a[href="/submit"]',
-      '.fa.fa-star.is-rating-item',
-      'input[type="checkbox"]',
-    ];
-
-    const textSelectors = [
-      'p',
-      'span',
-      'div:not(:has(*))',
-      'h1',
-      'h2',
-      'h3',
-      'h4',
-      'h5',
-      'h6',
-      'li',
-      'article',
-    ];
-    const modifiedTextSelectors = textSelectors.map(
-      selector =>
-        `:not(${interactableSelectors.join(', ')}):not(style) > ${selector}`
-    );
-
-    const combinedSelectors = [
-      ...interactableSelectors,
-      ...modifiedTextSelectors,
-    ];
-    const elements = document.querySelectorAll(combinedSelectors.join(', '));
-
-    return Array.from(elements)
-      .map(el => {
-        const rect = el.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) return null;
-
-        const isInteractable = interactableSelectors.some(selector =>
-          el.matches(selector)
-        );
-
-        return {
-          tagName: el.tagName,
-          isInteractable,
-          text: el.textContent?.trim().substring(0, 50) || null,
-          alt:
-            el instanceof HTMLElement
-              ? el.getAttribute('alt') || undefined
-              : undefined,
-          className:
-            el instanceof HTMLElement ? el.className || undefined : undefined,
-          elementId: el instanceof HTMLElement ? el.id || undefined : undefined,
-          boundingBox: {
-            x: rect.left + window.scrollX,
-            y: rect.top + window.scrollY,
-            width: rect.width,
-            height: rect.height,
-          },
-          xpath: getXPathForElement(el),
-        };
-      })
-      .filter((box): box is NonNullable<typeof box> => box !== null);
   }
 
   sendEventBrowserTrajectories(browserAction: BrowserAction) {
@@ -375,18 +229,6 @@ export class Browser {
         browserState: this.state
       }),
     });
-  }
-
-  private debounce(func: () => void, delay: number): () => void {
-    return () => {
-      if (this.captureScreenshotTimeout) {
-        clearTimeout(this.captureScreenshotTimeout);
-      }
-      this.captureScreenshotTimeout = setTimeout(() => {
-        func();
-        this.captureScreenshotTimeout = null;
-      }, delay);
-    };
   }
 
   private handleMessage(message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) {

@@ -145,7 +145,3 @@ async function closeTrackingTab() {
     console.error('Failed to close tracking tab:', error);
   }
 }
-
-
-
-
