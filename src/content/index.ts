@@ -1,70 +1,38 @@
 import { Browser } from "../Browser";
-import { removeHighlight } from "../helpers";
+import { getExtensionState, getOriginalTabId, removeHighlight } from "../helpers";
 console.log('Content script loaded');
 
-let isTracking = false;
 let browser: Browser | null = null;
 
 initializeTracking();
 
-async function startTracking() {
-  if (!browser) {
-    browser = new Browser();
-  }
-  isTracking = true;
-  browser.addEventListeners();
-}
-
-function stopTracking() {
-  isTracking = false;
-  console.log('stopTracking');
-  if (browser) {
-    browser.removeEventListeners();
-    browser = null;
-  }
-  removeHighlight();
-}
-
 async function initializeTracking() {
-  const state = await getState();
+  const state = await getExtensionState();
   const originalTabId = await getOriginalTabId();
+  const currentTabId = await getCurrentTabId();
 
-  if (state && originalTabId) {
-    const isDescendant = await checkIsDescendantTab();
-    if (isDescendant) {
-      startTracking();
+  if (originalTabId === currentTabId) {
+    if (state) {
+      if (!browser) {
+        browser = new Browser();
+      }
+      browser.addEventListeners();
     } else {
-      stopTracking();
+      if (browser) {
+        browser.removeEventListeners();
+        browser = null;
+      }
+      removeHighlight();
     }
-  } else {
-    stopTracking();
   }
 }
 
-async function getState(): Promise<boolean> {
+// Add this new function to get the current tab ID
+async function getCurrentTabId(): Promise<number> {
   return new Promise((resolve) => {
-    chrome.storage.local.get('bt-extension-load', (result) => {
-      resolve(result['bt-extension-load'] === 'true');
+    chrome.runtime.sendMessage({ action: "getCurrentTabId" }, (response) => {
+      resolve(response.tabId);
     });
-  });
-}
-
-async function getOriginalTabId(): Promise<string | null> {
-  return new Promise((resolve) => {
-    chrome.storage.local.get('extension-original-tab-id', (result) => {
-      resolve(result['extension-original-tab-id'] || null);
-    });
-  });
-}
-
-async function checkIsDescendantTab(): Promise<boolean> {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage(
-      { action: 'isDescendantTab' },
-      (response) => {
-        resolve(response.isDescendant);
-      }
-    );
   });
 }
 

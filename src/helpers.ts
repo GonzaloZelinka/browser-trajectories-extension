@@ -143,9 +143,29 @@ export function getElementInfo(element: Element) {
   };
 };
 
-export async function syncToStorage(key: string, value: string | null): Promise<void> {
+export async function syncToStorage(key: string, value: any): Promise<void> {
   return new Promise((resolve) => {
-    console.log('syncToStorage', key, value);
     chrome.storage.local.set({ [key]: value }, resolve);
   });
+}
+
+export async function getOriginalTabId(): Promise<number | null> {
+  return new Promise((resolve) => {
+    chrome.storage.local.get('extension-original-tab-id', (result) => {
+      resolve(result['extension-original-tab-id'] || null);
+    });
+  });
+}
+
+export async function getExtensionState(): Promise<boolean> {
+  return new Promise((resolve) => {
+    chrome.storage.local.get('bt-extension-load', (result) => {
+      resolve(result['bt-extension-load'] === 'true');
+    });
+  });
+}
+
+export async function checkOriginalTabId(tabId: number): Promise<boolean> {
+  const originalTabId = await getOriginalTabId();
+  return originalTabId === tabId;
 }

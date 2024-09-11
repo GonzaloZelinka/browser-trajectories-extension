@@ -117,7 +117,6 @@ export class Browser {
   async captureScreenshot() {
     if (this.isCapturingScreenshot) return;
 
-    console.log('start captureScreenshot');
     this.isCapturingScreenshot = true;
 
     try {
@@ -392,7 +391,6 @@ export class Browser {
 
   private handleMessage(message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) {
     if (message.type === 'navigation-complete') {
-      console.log('Navigation complete, updating content');
       this.contentUpdated();
     }
   }

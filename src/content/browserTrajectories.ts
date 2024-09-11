@@ -4,7 +4,6 @@ import { BrowserAction, BrowserState } from "../types";
 console.log('bt content script loaded');
 
 function parseState(rawState: string | null): boolean | null {
-  console.log('parseState', rawState);
   if (rawState === 'null') {
     return null;
   }
@@ -25,15 +24,7 @@ async function setState(newState: boolean | null): Promise<void> {
 // Listen for messages from the background script
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   if (request.action === 'forwardEventToBrowserTrajectories') {
-    if (request?.event?.session !== undefined) {
-      window.postMessage(
-        {
-          action: 'startSession',
-          session: request.event.session,
-        },
-        '*'
-      );
-    } else if (request?.browserAction) {
+    if (request?.browserAction) {
       // Forward the event to the localhost application
       window.postMessage(
         {
@@ -64,6 +55,8 @@ async function openTrackingTab() {
       );
     });
 
+    console.log('openTrackingTab', response);
+
     if ('error' in response) {
       throw new Error(response.error);
     }
@@ -92,6 +85,7 @@ window.addEventListener(
 );
 
 async function stopTracking() {
+  await closeTrackingTab();
   await removeTabId();
   await setState(null);
   await syncToStorage('browserState', null);
@@ -131,5 +125,27 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   }
 
 });
+
+async function closeTrackingTab() {
+  try {
+    const response = await new Promise<any>((resolve, reject) => {
+      chrome.runtime.sendMessage({ action: 'closeTrackingTab' }, response => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+        } else {
+          resolve(response);
+        }
+      });
+    });
+
+    if (!response.success) {
+      throw new Error(response.error || 'Unknown error occurred');
+    }
+  } catch (error) {
+    console.error('Failed to close tracking tab:', error);
+  }
+}
+
+
 
 
