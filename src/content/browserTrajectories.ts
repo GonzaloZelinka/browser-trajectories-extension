@@ -80,23 +80,35 @@ window.addEventListener(
     if (event.origin !== 'http://localhost:3000' && event.origin !== 'https://browser.labeling.app') return;
 
     if (event.data.action === 'extensionLoadChanged') {
-      await openTrackingTab();
-      await setState(true);
+      const state = parseState(localStorage.getItem('bt-extension-load'));
+      if (state) {
+        await startTracking()
+      } else {
+        await stopTracking()
+      }
     }
   },
   false
 );
 
+async function stopTracking() {
+  await removeTabId();
+  await setState(null);
+  await syncToStorage('browserState', null);
+}
+
+async function startTracking() {
+  await openTrackingTab();
+  await setState(true);
+}
+
 // Listen for localStorage changes
 window.addEventListener('storage', async (event) => {
-  console.log('storage', event);
   if (event.key === 'bt-extension-load') {
     const newState = parseState(event.newValue);
     await syncToStorage('bt-extension-load', event.newValue);
     if (newState === null) {
-      await removeTabId();
-      await setState(null);
-      await syncToStorage('browserState', null);
+      await stopTracking()
     }
   } else if (event.key === 'extension-original-tab-id') {
     await syncToStorage('extension-original-tab-id', event.newValue);
