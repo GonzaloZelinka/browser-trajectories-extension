@@ -45,19 +45,6 @@ async function getOriginalTabId(): Promise<number | null> {
   });
 }
 
-async function getWindowIdForTab(tabId: number): Promise<number | undefined> {
-  return new Promise((resolve) => {
-    chrome.tabs.get(tabId, (tab) => {
-      if (chrome.runtime.lastError) {
-        console.error('Error getting tab:', chrome.runtime.lastError);
-        resolve(undefined);
-      } else {
-        resolve(tab.windowId);
-      }
-    });
-  });
-}
-
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'sendEventToBrowserTrajectories') {
     chrome.tabs.query({ url: 'http://localhost:3000/*' }, tabs => {
@@ -131,6 +118,7 @@ chrome.webNavigation.onCommitted.addListener(async (details) => {
 
   if (details.transitionQualifiers.includes('from_address_bar') && details.transitionType === 'typed') {
     const isDescendant = await isDescendantTab(details.tabId);
+    console.log('isDescendant', isDescendant);
     if (!isDescendant) return;
     browser.changeState(state => {
       state.url = details.url;

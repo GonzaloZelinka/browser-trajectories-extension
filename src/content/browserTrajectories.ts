@@ -80,9 +80,8 @@ window.addEventListener(
     if (event.origin !== 'http://localhost:3000' && event.origin !== 'https://browser.labeling.app') return;
 
     if (event.data.action === 'extensionLoadChanged') {
-      await setState(true);
-    } else if (event.data.action === 'openTrackingTab') {
       await openTrackingTab();
+      await setState(true);
     }
   },
   false
