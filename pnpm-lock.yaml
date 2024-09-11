@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      lodash.debounce:
+        specifier: ^4.0.8
+        version: 4.0.8
     devDependencies:
       '@babel/preset-env':
         specifier: ^7.25.4
@@ -17,63 +21,33 @@ importers:
       '@types/chrome':
         specifier: ^0.0.270
         version: 0.0.270
+      '@types/lodash':
+        specifier: ^4.17.7
+        version: 4.17.7
       '@types/node':
         specifier: ^22.5.4
         version: 22.5.4
       '@types/puppeteer-core':
         specifier: ^7.0.4
         version: 7.0.4
-      assert:
-        specifier: ^2.0.0
-        version: 2.1.0
       babel-loader:
         specifier: ^9.1.3
         version: 9.1.3(@babel/core@7.25.2)(webpack@5.94.0(webpack-cli@5.1.4))
       browserify:
         specifier: ^17.0.0
         version: 17.0.0
-      browserify-zlib:
-        specifier: ^0.2.0
-        version: 0.2.0
       copy-webpack-plugin:
         specifier: ^12.0.2
         version: 12.0.2(webpack@5.94.0(webpack-cli@5.1.4))
       html-webpack-plugin:
         specifier: ^5.6.0
         version: 5.6.0(webpack@5.94.0(webpack-cli@5.1.4))
-      https-browserify:
-        specifier: ^1.0.0
-        version: 1.0.0
-      os-browserify:
-        specifier: ^0.3.0
-        version: 0.3.0
-      path-browserify:
-        specifier: ^1.0.1
-        version: 1.0.1
-      process:
-        specifier: ^0.11.10
-        version: 0.11.10
       puppeteer-core:
         specifier: ^23.3.0
         version: 23.3.0
-      puppeteer-extension-transport:
-        specifier: ^0.0.6
-        version: 0.0.6
-      stream-browserify:
-        specifier: ^3.0.0
-        version: 3.0.0
-      stream-http:
-        specifier: ^3.2.0
-        version: 3.2.0
       typescript:
         specifier: ^5.6.2
         version: 5.6.2
-      url:
-        specifier: ^0.11.0
-        version: 0.11.4
-      util:
-        specifier: ^0.12.4
-        version: 0.12.5
       webpack:
         specifier: ^5.94.0
         version: 5.94.0(webpack-cli@5.1.4)
@@ -753,6 +727,9 @@ packages:
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
+  '@types/lodash@4.17.7':
+    resolution: {integrity: sha512-8wTvZawATi/lsmNu10/j2hk1KEP0IvjubqPE3cu1Xz7xfXXt5oCq3SNUz4fMIP4XGF9Ky+Ue2tBA3hcS7LSBlA==}
+
   '@types/node@22.5.4':
     resolution: {integrity: sha512-FDuKUJQm/ju9fT/SeX/6+gBzoPzlVCzfzmGkwKvRHQVxi4BntVbyIwf6a4Xn62mrvndLiml6z/UBXIdEVjQLXg==}
 
@@ -910,9 +887,6 @@ packages:
 
   assert@1.5.1:
     resolution: {integrity: sha512-zzw1uCAgLbsKwBfFc8CX78DDg+xZeBksSO3vwVIDDN5i94eOrPsSSyiVhmsSABFDM/OcpE2aagCat9dnWQLG1A==}
-
-  assert@2.1.0:
-    resolution: {integrity: sha512-eLHpSK/Y4nhMJ07gDaAzoX/XAKS8PSaojml3M0DM4JpV1LAi5JOJ/p6H/XWrl8L+DzVEvVCW1z3vWAaB9oTsQw==}
 
   ast-types@0.13.4:
     resolution: {integrity: sha512-x1FCFnFifvYDDzTaLII71vG5uvDwgtmDTEVWAxrgeiR8VjMONcCXJx7E+USjDtHlwFmt9MysbqgF9b9Vjr6w+w==}
@@ -1599,10 +1573,6 @@ packages:
     resolution: {integrity: sha512-xelSayHH36ZgE7ZWhli7pW34hNbNl8Ojv5KVmkJD4hBdD3th8Tfk9vYasLM+mXWOZhFkgZfxhLSnrwRr4elSSg==}
     engines: {node: '>=0.10.0'}
 
-  is-nan@1.3.2:
-    resolution: {integrity: sha512-E+zBKpQ2t6MEo1VsonYmluk9NxGrbzpeeLC2xIViuO2EjU2xsXsBPwTr3Ykv9l08UYEVEdWeRZNouaZqF6RN0w==}
-    engines: {node: '>= 0.4'}
-
   is-number@7.0.0:
     resolution: {integrity: sha512-41Cifkg6e8TylSpdtTpeLVMqvSBEVzTttHvERD741+pnZ8ANv0004MRL43QKPDlK9cGvNp6NZWZUBlbGXYxxng==}
     engines: {node: '>=0.12.0'}
@@ -1779,10 +1749,6 @@ packages:
     resolution: {integrity: sha512-IRZSRuzJiynemAXPYtPe5BoI/RESNYR7TYm50MC5Mqbd3Jmw5y790sErYw3V6SryFJD64b74qQQs9wn5Bg/k3g==}
     engines: {node: '>= 0.4'}
 
-  object-is@1.1.6:
-    resolution: {integrity: sha512-F8cZ+KfGlSGi09lJT7/Nd6KJZ9ygtvYC0/UYYLI9nmQKLMnydpB9yvbv9K1uSkEu7FU9vYPmVwLg328tX+ot3Q==}
-    engines: {node: '>= 0.4'}
-
   object-keys@1.1.1:
     resolution: {integrity: sha512-NuAESUOUMrlIXOfHKzD6bpPu3tYt3xvjNdRIQ+FeT0lNb4K8WR70CaDxhuNguS2XG+GjkyMwOzsN5ZktImfhLA==}
     engines: {node: '>= 0.4'}
@@ -1934,9 +1900,6 @@ packages:
   puppeteer-core@23.3.0:
     resolution: {integrity: sha512-sB2SsVMFs4gKad5OCdv6w5vocvtEUrRl0zQqSyRPbo/cj1Ktbarmhxy02Zyb9R9HrssBcJDZbkrvBnbaesPyYg==}
     engines: {node: '>=18'}
-
-  puppeteer-extension-transport@0.0.6:
-    resolution: {integrity: sha512-yl5AauV0rJNj/sisNHm3QD0SWZ7I0aGRcYyYDeAAcRLIXy08uqBK3AJFYR/in+y1ELwTDD0Y434FlziA8w5y7Q==}
 
   qs@6.13.0:
     resolution: {integrity: sha512-+38qI9SOr8tfZ4QmJNplMUxqjbe7LKvvZgWdExBOmd+egZTtjLB67Gu0HRX3u/XOq7UU2Nx6nsjvS16Z9uwfpg==}
@@ -3275,6 +3238,8 @@ snapshots:
 
   '@types/json-schema@7.0.15': {}
 
+  '@types/lodash@4.17.7': {}
+
   '@types/node@22.5.4':
     dependencies:
       undici-types: 6.19.8
@@ -3461,14 +3426,6 @@ snapshots:
     dependencies:
       object.assign: 4.1.5
       util: 0.10.4
-
-  assert@2.1.0:
-    dependencies:
-      call-bind: 1.0.7
-      is-nan: 1.3.2
-      object-is: 1.1.6
-      object.assign: 4.1.5
-      util: 0.12.5
 
   ast-types@0.13.4:
     dependencies:
@@ -4310,11 +4267,6 @@ snapshots:
     dependencies:
       is-extglob: 2.1.1
 
-  is-nan@1.3.2:
-    dependencies:
-      call-bind: 1.0.7
-      define-properties: 1.2.1
-
   is-number@7.0.0: {}
 
   is-plain-object@2.0.4:
@@ -4472,11 +4424,6 @@ snapshots:
       boolbase: 1.0.0
 
   object-inspect@1.13.2: {}
-
-  object-is@1.1.6:
-    dependencies:
-      call-bind: 1.0.7
-      define-properties: 1.2.1
 
   object-keys@1.1.1: {}
 
@@ -4650,8 +4597,6 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
-
-  puppeteer-extension-transport@0.0.6: {}
 
   qs@6.13.0:
     dependencies:

@@ -5,9 +5,11 @@ export class Browser {
   state: BrowserState;
   lastImage?: Uint8Array;
   private boundHandleAction: (event: Event) => void;
-  private boundHandleFrameNavigated: () => void;
   private boundHandleScroll: () => void;
   private highlightThrottleTimeout: number | null = null;
+  private captureScreenshotDebounced: () => void;
+  private captureScreenshotTimeout: NodeJS.Timeout | null = null;
+  private isCapturingScreenshot: boolean = false;
 
   constructor() {
     this.state = {
@@ -19,8 +21,11 @@ export class Browser {
       if (loadedState) this.state = loadedState;
     });
     this.boundHandleAction = this.handleAction.bind(this);
-    this.boundHandleFrameNavigated = this.handleFrameNavigated.bind(this);
     this.boundHandleScroll = this.handleScroll.bind(this);
+    this.captureScreenshotDebounced = this.debounce(this.captureScreenshot.bind(this), 250);
+
+    // Add listener for messages from background script
+    chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
   }
 
   async loadState(): Promise<BrowserState | null> {
@@ -53,42 +58,9 @@ export class Browser {
     });
   }
 
-  handleFrameNavigated() {
-    this.lastImage = undefined;
-    this.updateScroll();
-
-    let browserAction: BrowserAction | null = null;
-    const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-
-    if (navigation.type === 'reload') {
-      console.log('navigation type: reload');
-      browserAction = {
-        type: 'pageReload',
-      };
-    } else if (navigation.type === 'navigate') {
-      console.log('navigation type: navigate');
-      browserAction = {
-        type: 'navigate',
-        url: window.location.href,
-      };
-    }
-
-    this.changeState(state => {
-      state.url = window.location.href;
-    });
-
-    if (browserAction) {
-      this.sendEventBrowserTrajectories(browserAction, this.state);
-    }
-  }
-
   async contentUpdated() {
     console.log('contentUpdated');
     try {
-      // Attempt to capture screenshot
-      const start = performance.now();
-      const browserImage = await this.captureBrowserImage();
-      const end = performance.now();
 
       // Get the DOM content
       const dom = document.documentElement.outerHTML;
@@ -96,32 +68,28 @@ export class Browser {
       const elementBoundingBoxes = this.captureElementBoundingBoxes();
 
       this.changeState(state => {
-        console.log('state', state);
         state.dom = dom;
         state.elementBoundingBoxes = elementBoundingBoxes;
-        if (browserImage) {
-          state.image = browserImage;
-        }
       });
 
-      // ... rest of the method ...
+      // Use the debounced capture screenshot
+      this.captureScreenshotDebounced();
     } catch (e) {
       console.log('Error updating content', e);
     }
   }
 
-  async getCurrentTabId(): Promise<number> {
-    return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage({ action: 'getCurrentTabId' }, (response) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
-        } else if (response && response.tabId) {
-          resolve(response.tabId);
-        } else {
-          reject(new Error('Unable to get current tab ID'));
-        }
-      });
-    });
+  parseScreenshot(dataUrl: string): BrowserImage {
+    return {
+      timestamp: Date.now(),
+      rect: {
+        x: window.scrollX,
+        y: window.scrollY,
+        width: window.innerWidth,
+        height: window.innerHeight
+      },
+      image: dataUrl
+    }
   }
 
   async captureBrowserImage(): Promise<BrowserImage | undefined> {
@@ -132,16 +100,7 @@ export class Browser {
             console.error('Error capturing screenshot:', chrome.runtime.lastError);
             resolve(undefined);
           } else if (response && response.image) {
-            const image: BrowserImage = {
-              timestamp: Date.now(),
-              rect: {
-                x: window.scrollX,
-                y: window.scrollY,
-                width: window.innerWidth,
-                height: window.innerHeight
-              },
-              image: response.image
-            };
+            const image = this.parseScreenshot(response.image);
             resolve(image);
           } else {
             console.error('Invalid response from background script');
@@ -155,8 +114,27 @@ export class Browser {
     }
   }
 
+  async captureScreenshot() {
+    if (this.isCapturingScreenshot) return;
+
+    console.log('start captureScreenshot');
+    this.isCapturingScreenshot = true;
+
+    try {
+      const browserImage = await this.captureBrowserImage();
+      if (browserImage) {
+        this.changeState(state => {
+          state.image = browserImage;
+        });
+      }
+    } catch (error) {
+      console.error('Error capturing screenshot:', error);
+    } finally {
+      this.isCapturingScreenshot = false;
+    }
+  }
+
   addEventListeners() {
-    window.addEventListener('load', this.boundHandleFrameNavigated);
     window.addEventListener('click', this.boundHandleAction, { capture: true });
     window.addEventListener('keydown', this.boundHandleAction);
     window.addEventListener('keyup', this.boundHandleAction);
@@ -167,7 +145,6 @@ export class Browser {
   }
 
   removeEventListeners() {
-    window.removeEventListener('load', this.boundHandleFrameNavigated);
     window.removeEventListener('click', this.boundHandleAction, { capture: true });
     window.removeEventListener('keydown', this.boundHandleAction);
     window.removeEventListener('keyup', this.boundHandleAction);
@@ -284,7 +261,7 @@ export class Browser {
     }
     // return state
     if (browserAction) {
-      this.sendEventBrowserTrajectories(browserAction, this.state);
+      this.sendEventBrowserTrajectories(browserAction);
     }
   }
 
@@ -392,12 +369,31 @@ export class Browser {
       .filter((box): box is NonNullable<typeof box> => box !== null);
   }
 
-  sendEventBrowserTrajectories(browserAction: BrowserAction, browserState: BrowserState) {
+  sendEventBrowserTrajectories(browserAction: BrowserAction) {
     chrome.storage.local.set({
       state: JSON.stringify({
         browserAction,
-        browserState
+        browserState: this.state
       }),
     });
+  }
+
+  private debounce(func: () => void, delay: number): () => void {
+    return () => {
+      if (this.captureScreenshotTimeout) {
+        clearTimeout(this.captureScreenshotTimeout);
+      }
+      this.captureScreenshotTimeout = setTimeout(() => {
+        func();
+        this.captureScreenshotTimeout = null;
+      }, delay);
+    };
+  }
+
+  private handleMessage(message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) {
+    if (message.type === 'navigation-complete') {
+      console.log('Navigation complete, updating content');
+      this.contentUpdated();
+    }
   }
 }

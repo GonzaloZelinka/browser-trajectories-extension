@@ -26,7 +26,7 @@ export interface ElementInfo {
 export interface BrowserImage {
   timestamp: number;
   rect: Rect;
-  image: ArrayBuffer;
+  image: string;
 }
 
 export interface BrowserState {

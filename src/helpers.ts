@@ -142,3 +142,10 @@ export function getElementInfo(element: Element) {
     xpath: getXPathForElement(element),
   };
 };
+
+export async function syncToStorage(key: string, value: string | null): Promise<void> {
+  return new Promise((resolve) => {
+    console.log('syncToStorage', key, value);
+    chrome.storage.local.set({ [key]: value }, resolve);
+  });
+}

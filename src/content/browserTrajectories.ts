@@ -1,3 +1,4 @@
+import { syncToStorage } from "../helpers";
 import { BrowserAction, BrowserState } from "../types";
 
 console.log('bt content script loaded');
@@ -11,10 +12,6 @@ function parseState(rawState: string | null): boolean | null {
 
 }
 
-async function setTabId(newTabId: string): Promise<void> {
-  await syncToStorage('extension-original-tab-id', newTabId);
-}
-
 async function removeTabId(): Promise<void> {
   localStorage.removeItem('extension-original-tab-id');
   await syncToStorage('extension-original-tab-id', null);
@@ -23,13 +20,6 @@ async function removeTabId(): Promise<void> {
 async function setState(newState: boolean | null): Promise<void> {
   localStorage.setItem('bt-extension-load', newState?.toString() ?? 'null');
   await syncToStorage('bt-extension-load', newState?.toString() ?? 'null');
-}
-
-async function syncToStorage(key: string, value: string | null): Promise<void> {
-  return new Promise((resolve) => {
-    console.log('syncToStorage', key, value);
-    chrome.storage.local.set({ [key]: value }, resolve);
-  });
 }
 
 // Listen for messages from the background script
@@ -78,10 +68,6 @@ async function openTrackingTab() {
       throw new Error(response.error);
     }
 
-    const newTabId = response.tabId;
-    console.log('newTabId', newTabId);
-
-    await setTabId(newTabId.toString());
     await setState(false);
   } catch (error) {
     console.error('Error creating new tab:', error);
@@ -96,7 +82,6 @@ window.addEventListener(
     if (event.data.action === 'extensionLoadChanged') {
       await setState(true);
     } else if (event.data.action === 'openTrackingTab') {
-      console.log('openTrackingTab');
       await openTrackingTab();
     }
   },
@@ -112,7 +97,7 @@ window.addEventListener('storage', async (event) => {
     if (newState === null) {
       await removeTabId();
       await setState(null);
-      // await syncToStorage('browserState', null);
+      await syncToStorage('browserState', null);
     }
   } else if (event.key === 'extension-original-tab-id') {
     await syncToStorage('extension-original-tab-id', event.newValue);

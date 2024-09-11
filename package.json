@@ -11,8 +11,7 @@
     "puppeteer-core": "^23.3.0",
     "typescript": "^5.6.2",
     "webpack": "^5.94.0",
-    "webpack-cli": "^5.1.4",
-    "browserify": "^17.0.0"
+    "webpack-cli": "^5.1.4"
   },
   "scripts": {
     "build": "webpack --config webpack.config.cjs",
