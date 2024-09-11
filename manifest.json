@@ -20,9 +20,6 @@
   "background": {
     "service_worker": "background.js"
   },
-  "action": {
-    "default_popup": "index.html"
-  },
   "content_scripts": [
     {
       "matches": [

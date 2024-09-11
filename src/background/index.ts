@@ -91,7 +91,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       console.error('[captureScreenshot] No tabId found');
       return;
     }
-    chrome.tabs.captureVisibleTab(sender.tab.windowId, { format: 'jpeg' }, (dataUrl) => {
+    chrome.tabs.captureVisibleTab(sender.tab.windowId, { format: 'jpeg', quality: 40 }, (dataUrl) => {
       if (chrome.runtime.lastError) {
         console.error('Error capturing screenshot:', chrome.runtime.lastError);
         sendResponse({ error: chrome.runtime.lastError.message });
